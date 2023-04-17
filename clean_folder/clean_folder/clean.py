@@ -4,8 +4,19 @@ from re import sub
 import argparse
 import os
 
+known_extensions = set()
+unknown_extensions = set()
 
-def read_folder(path):
+result = {
+    "images": [],
+    "video": [],
+    "documents": [],
+    "audio": [],
+    "archives": [],
+    "other": []
+}
+
+def read_folder(path, output_folder):
     for el in path.iterdir():
         if el.is_dir():
             if el.name in ["archives", "video", "audio", "documents", "images"]:
@@ -13,12 +24,14 @@ def read_folder(path):
             else:
                 read_folder(el)
         else:
-            copy_file(el)
+            copy_file(el, output_folder)
 
-def copy_file(file):
+    remove_empty_folders(path)
+    
+def copy_file(file, output_folder):
     ext = sort(file)
     if ext == "archives":
-        unarchiving(file)
+        unarchiving(file, output_folder)
   
     else:    
         new_path = output_folder / ext
@@ -75,7 +88,7 @@ def nozmalize(file):
 
     return norm_file_name + extension
 
-def unarchiving(file):
+def unarchiving(file, output_folder):
     output_folder.mkdir(exist_ok=True, parents=True)
     norm_w = file.name.replace(file.suffix, "")
     folder_for_line = output_folder / "archives" / nozmalize(norm_w)
@@ -94,27 +107,21 @@ def remove_empty_folders(path):
             if not os.listdir(file_path):
                 os.rmdir(file_path)
 
-known_extensions = set()
-unknown_extensions = set()
+def run():
+    parser = argparse.ArgumentParser(description="Sorting folder")
+    parser.add_argument("--sourse", "-s")
+    parser.add_argument("--output", "-o", default="output", help="Output folder")
 
-result = {
-    "images": [],
-    "video": [],
-    "documents": [],
-    "audio": [],
-    "archives": [],
-    "other": []
-}
-parser = argparse.ArgumentParser(description="Sorting folder")
-parser.add_argument("--sourse", "-s")
-parser.add_argument("--output", "-o", default="output", help="Output folder")
+    args = vars(parser.parse_args())
+    source = args.get("sourse")
+    output = args.get("output")
 
-args = vars(parser.parse_args())
-source = args.get("sourse")
-output = args.get("output")
+    output_folder = Path(output)
+    path = Path(source)
+    read_folder(path, output_folder)
 
-output_folder = Path(output)
-path = Path(source)
-read_folder(path)
-remove_empty_folders(path)
-print(f" Список файлів по категоріям:\n{result}\n Відомі розширення:\n{known_extensions}\n Невідомі розширення:\n{unknown_extensions}")
+    print(f" Список файлів по категоріям:\n{result}\n Відомі розширення:\n{known_extensions}\n Невідомі розширення:\n{unknown_extensions}")
+
+
+if __name__ == "__main__":
+    run()
